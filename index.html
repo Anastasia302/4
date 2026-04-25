@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Life App</title>
+
+<style>
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+  background: #05070d;
+  color: white;
+}
+
+/* стабильный фон */
+body::before {
+  content:"";
+  position:fixed;
+  inset:0;
+  background:
+    radial-gradient(circle at 20% 0%, rgba(30,144,255,0.15), transparent 50%),
+    radial-gradient(circle at 80% 10%, rgba(0,200,255,0.1), transparent 50%);
+  z-index:-1;
+}
+
+/* плавность */
+* {
+  transition: all 0.2s ease;
+}
+
+/* HEADER */
+.header {
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  position:relative;
+  padding:16px;
+}
+.calendar-btn {
+  position:absolute;
+  right:16px;
+}
+
+/* WEEK */
+.week {
+  display:flex;
+  justify-content:space-between;
+  padding:0 12px;
+}
+.day {
+  flex:1;
+  margin:2px;
+  padding:8px 0;
+  text-align:center;
+  border-radius:12px;
+  font-size:12px;
+  background:rgba(255,255,255,0.03);
+}
+.day.active {
+  background:linear-gradient(135deg,#1e90ff,#4fc3ff);
+  box-shadow:0 0 12px #1e90ff;
+}
+.day span {
+  display:block;
+  font-size:9px;
+  opacity:0.5;
+}
+
+/* CARD */
+.card {
+  margin:12px;
+  border-radius:20px;
+  background:rgba(255,255,255,0.05);
+  backdrop-filter:blur(20px);
+  border:1px solid rgba(255,255,255,0.08);
+}
+
+.card:active {
+  transform:scale(0.98);
+}
+
+/* HEADER блока */
+.card-header {
+  padding:14px;
+  text-align:center;
+  position:relative;
+  cursor:pointer;
+}
+
+.toggle {
+  position:absolute;
+  right:16px;
+  top:50%;
+  transform:translateY(-50%);
+  opacity:0.5;
+}
+
+/* CONTENT */
+.card-content {
+  max-height:500px;
+  overflow:hidden;
+  transition:max-height 0.3s ease;
+  padding:12px;
+}
+.card.closed .card-content {
+  max-height:0;
+  padding:0 12px;
+}
+
+/* EVENT */
+.event {
+  display:flex;
+  gap:12px;
+  padding:12px;
+  border-radius:14px;
+  background:rgba(255,255,255,0.03);
+  margin-bottom:8px;
+}
+.event:active {
+  background:rgba(30,144,255,0.1);
+}
+
+.time {
+  font-size:12px;
+  opacity:0.6;
+}
+
+/* LIST ITEMS */
+.item {
+  display:flex;
+  justify-content:space-between;
+  padding:12px;
+  border-radius:14px;
+  background:rgba(255,255,255,0.03);
+  margin-bottom:8px;
+}
+
+/* CHECK */
+.circle {
+  width:20px;
+  height:20px;
+  border-radius:50%;
+  border:1px solid rgba(255,255,255,0.3);
+}
+.circle.active {
+  background:linear-gradient(135deg,#1e90ff,#4fc3ff);
+  box-shadow:0 0 8px #1e90ff;
+}
+
+/* EMPTY */
+.empty {
+  text-align:center;
+  opacity:0.3;
+  font-size:22px;
+}
+
+/* NAV */
+.nav {
+  position:fixed;
+  bottom:10px;
+  left:50%;
+  transform:translateX(-50%);
+  width:90%;
+  background:rgba(255,255,255,0.05);
+  backdrop-filter:blur(25px);
+  border-radius:20px;
+  display:flex;
+  justify-content:space-around;
+  padding:10px 0;
+}
+
+.nav-btn {
+  color:#6b7a99;
+}
+.nav-btn.active {
+  color:#4fc3ff;
+  text-shadow:0 0 8px #4fc3ff;
+}
+</style>
+</head>
+
+<body>
+
+<div class="header">
+  <h2>Планер</h2>
+  <div class="calendar-btn">📅</div>
+</div>
+
+<div class="week" id="week"></div>
+
+<!-- СОБЫТИЯ -->
+<div class="card">
+  <div class="card-header" onclick="toggleCard(this)">
+    События
+    <div class="toggle">⌄</div>
+  </div>
+  <div class="card-content">
+    <div class="empty">—</div>
+  </div>
+</div>
+
+<!-- РАСПИСАНИЕ -->
+<div class="card">
+  <div class="card-header" onclick="toggleCard(this)">
+    Расписание
+    <div class="toggle">⌄</div>
+  </div>
+  <div class="card-content" id="schedule"></div>
+</div>
+
+<!-- ПРИВЫЧКИ -->
+<div class="card">
+  <div class="card-header" onclick="toggleCard(this)">
+    Привычки
+    <div class="toggle">⌄</div>
+  </div>
+  <div class="card-content" id="habits"></div>
+</div>
+
+<!-- КВЕСТЫ -->
+<div class="card">
+  <div class="card-header" onclick="toggleCard(this)">
+    Квесты
+    <div class="toggle">⌄</div>
+  </div>
+  <div class="card-content" id="quests"></div>
+</div>
+
+<!-- NAV -->
+<div class="nav">
+  <div class="nav-btn active">●</div>
+  <div class="nav-btn">●</div>
+  <div class="nav-btn">●</div>
+  <div class="nav-btn">●</div>
+  <div class="nav-btn">●</div>
+</div>
+
+<script>
+
+function toggleCard(el){
+  el.parentElement.classList.toggle("closed")
+}
+
+// WEEK
+function renderWeek(){
+  const week=document.getElementById("week")
+  week.innerHTML=""
+
+  let now=new Date()
+  let day=now.getDay()
+  let diff=(day===0?-6:1-day)
+  now.setDate(now.getDate()+diff)
+
+  const days=["Пн","Вт","Ср","Чт","Пт","Сб","Вс"]
+
+  for(let i=0;i<7;i++){
+    let d=new Date(now)
+    d.setDate(now.getDate()+i)
+
+    let el=document.createElement("div")
+    el.className="day"
+    el.innerHTML=`<span>${days[i]}</span>${d.getDate()}`
+
+    if(i===new Date().getDay()-1) el.classList.add("active")
+
+    week.appendChild(el)
+  }
+}
+
+// HABITS
+function renderHabits(){
+  const data=["Вода","Спорт","Чтение"]
+  const el=document.getElementById("habits")
+  el.innerHTML=""
+  data.forEach(h=>{
+    el.innerHTML+=`
+    <div class="item">
+      <span>${h}</span>
+      <div class="circle" onclick="this.classList.toggle('active')"></div>
+    </div>`
+  })
+}
+
+// QUESTS
+function renderQuests(){
+  const data=["Движение","Обучение","Общение"]
+  const el=document.getElementById("quests")
+  el.innerHTML=""
+  data.forEach(q=>{
+    el.innerHTML+=`
+    <div class="item">
+      <span>${q}</span>
+      <div class="circle" onclick="this.classList.toggle('active')"></div>
+    </div>`
+  })
+}
+
+// SCHEDULE
+function renderSchedule(){
+  const data=[
+    {from:"08:00",to:"09:00",text:"Подъем"},
+    {from:"09:00",to:"11:00",text:"Фокус"},
+    {from:"12:00",to:"13:00",text:"Обед"}
+  ]
+
+  const el=document.getElementById("schedule")
+  el.innerHTML=""
+  data.forEach(e=>{
+    el.innerHTML+=`
+    <div class="event">
+      <div class="time">${e.from}<br>${e.to}</div>
+      <div>${e.text}</div>
+    </div>`
+  })
+}
+
+renderWeek()
+renderHabits()
+renderQuests()
+renderSchedule()
+
+</script>
+
+</body>
+</html>
